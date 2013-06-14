@@ -1,0 +1,158 @@
+<!DOCTYPE HTML>
+<html lang="en">
+  <head>
+    <title>temp.html</title>
+    <meta charset="utf-8">    
+  </head>
+  <body>
+  <script type='text/javascript' src='https://cdn.firebase.com/v0/firebase.js'></script>
+  <script>
+    var Checkmate = new Firebase('26queens.firebaseIO.com/');
+    var boardQueue = Checkmate.child('boards');
+    var solutionRepo = Checkmate.child('solutions');
+    var blankBoard = Checkmate.child('blankBoard');
+    var clientRepo = Checkmate.child('clients');
+
+    var start = Checkmate.child('start');
+    var pointer = Checkmate.child('pointer');
+    var current;
+
+    var geo = {
+      buckets: {},
+      initBuckets: function () {
+        // load some basic bucket info from firebase
+        // set the buckets hash
+      },
+      calcBucket: function (lat, lon) {
+        // find closest bucket to lat, long
+        // return some sort of bucket identifier
+      }
+    };
+
+    var location = function (ip) {
+      // use that library
+    };
+
+    var getIP = function () {
+      // send ajax request to that site
+      // return the ip
+    };
+
+    var statTracker = {
+      fireURL: null,
+      userName: null,
+      geoBucket: null,
+      lat: null,
+      lon: null,
+      setGeoBucket: function () {
+        this.geoBucket = geo.calcBucket(this.lat, this.lon);
+      },
+      fireLogin: function () {
+        // set fireURL
+        // 
+        this.localUser;
+        // either pull from fireBase
+        // or add user to fireBase
+      },
+      fireUpdate: function () {
+        // local sessions stats are already happening
+        // start sending stats to users firebase
+        // only do this if fireLoggedIn
+      },
+      fireSend: function () {
+        // sends a block of data to some firebase write repo
+
+      }
+    };
+
+    var transact = function (successCallback) {
+      pointer.transaction(function(current_value) {
+        current = current_value;
+        console.log('current')
+        return current_value + 1;
+      }, function(error, committed, snapshot) {
+        console.log('Was there an error? ' + error);
+        console.log('Did we commit the transaction? ' + committed);
+        console.log('The current value is: ' + current);
+
+        if (committed) {
+          successCallback();
+        }
+      });
+    };
+
+    var totalBoards;
+    Checkmate.child('totalBoards').once('value', function (snapshot) {
+      totalBoards = snapshot.val();
+    });
+
+    var makeBoards = function () {
+      blankBoard.once('value', function (snapshot) {
+        var board = snapshot.val();
+        dispatchPawn('breathe', [board.left, board.col, board.right]);
+      });
+    };
+
+    var solveOneBoard = function () {
+      transact(function () {
+        if (current <= totalBoards) {
+          boardQueue.child(current).once('value', function (snapBoard) {
+            var board = snapBoard.val().board;
+            console.log('board', board);
+            dispatchPawn('dive', board);
+          });
+        }
+      });
+    };
+
+    var Pawn = new Worker('pawn.js');
+
+    // Pawn Dispatchers
+    var dispatchPawn = function(action, board) {
+      Pawn.postMessage({
+        type: action,
+        board: [board[0], board[1], board[2]]
+      });
+    };
+
+    // Pawn handlers for shooting to Firebase
+    var count = 1;
+    Pawn.onmessage = function(message) {
+      switch (message.data.type) {
+        case 'solutions':
+          console.log("Recovered %d solutions from Pawn", message.data.package.solutions, message.data.package.board);
+          // TODO: send these somewhere
+          console.log('worker sols: ', message.data.package.solutions);
+          solutionRepo.child(current).push(message.data.package.solutions);
+          solveOneBoard();
+          break;
+        case 'widened':
+          console.log("Pawn Returned some boards: ", message.data.package.source, message.data.package.boards);
+          message.data.package.boards.forEach(function(board) {
+            boardQueue.child(count).set({
+              board: {
+                0: board[0],
+                1: board[1],
+                2: board[2]
+              }
+            }, function(err) {
+              err || console.log("Pushed board to Firebase");
+              // Checkmate.once('child_added', playqueens);
+            });
+
+            count++;
+          });
+          break;
+        default:
+          throw new Error ("Invalid message from Pawn");
+      }
+    };
+
+    Pawn.onerror = function(e) {
+      console.log(e);
+    };
+
+  </script>
+  </body>
+
+</html>

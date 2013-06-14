@@ -1,4 +1,163 @@
-<!-- Begin LaunchRock Widget -->
-<div id="lr-widget" rel="IUTBNZBC"></div>
-<script type="text/javascript" src="http://ignition.launchrock.com/ignition-current.min.js"></script>
-<!-- End LaunchRock Widget -->
+<!DOCTYPE HTML>
+<html lang="en">
+  <head>
+    <title>temp.html</title>
+    <meta charset="utf-8">    
+  </head>
+  <body>
+  <script type='text/javascript' src='https://cdn.firebase.com/v0/firebase.js'></script>
+  <script>
+    var Checkmate = new Firebase('26queens.firebaseIO.com/');
+    var boardQueue = Checkmate.child('boards');
+    var solutionRepo = Checkmate.child('solutions');
+    var blankBoard = Checkmate.child('blankBoard');
+    var clientRepo = Checkmate.child('clients');
+
+    var start = Checkmate.child('start');
+    var pointer = Checkmate.child('pointer');
+    var current;
+
+    var transact = function (successCallback) {
+      pointer.transaction(function(current_value) {
+        current = current_value;
+        console.log('current')
+        return current_value + 1;
+      }, function(error, committed, snapshot) {
+        console.log('Was there an error? ' + error);
+        console.log('Did we commit the transaction? ' + committed);
+        console.log('The current value is: ' + current);
+
+        if (committed) {
+          successCallback();
+        }
+      });
+    };
+
+    var totalBoards;
+    Checkmate.child('totalBoards').once('value', function (snapshot) {
+      totalBoards = snapshot.val();
+    });
+
+    var makeBoards = function () {
+      blankBoard.once('value', function (snapshot) {
+        var board = snapshot.val();
+        dispatchPawn('breathe', [board.left, board.col, board.right]);
+      });
+    };
+
+    var countSolutions = function () {
+      var count = 1;
+      var total = 0;
+      while (count <= totalBoards) {
+        solutionRepo.child(count).once('value', function (snapshot){
+          var result = -1;
+          snapshot.forEach(function (childsnapshot) {
+            if (result === -1) {
+              result = childsnapshot.val();
+            }
+          });
+          total += result;
+          console.log('total solutions: ' + total);
+          if (count === totalBoards) {
+            // write total
+            
+          }
+        });
+        count++;
+      }
+    };
+
+    var connectClient = function () {
+      // TODO
+    };
+
+    // var solveOneBoard = function () {
+    //   start.once('value', function (snapStart) {
+    //     if (snapStart.val() === 1) {
+    //       transact(function () {
+    //         if (current <= totalBoards) {
+    //           boardQueue.child(current).once('value', function (snapBoard) {
+    //             var board = snapBoard.val().board;
+    //             console.log('board', board);
+    //             dispatchPawn('dive', board);
+    //           });
+    //         }
+    //       });
+    //     }
+    //   });
+    // };
+
+    var solveOneBoard = function () {
+      transact(function () {
+        if (current <= totalBoards) {
+          boardQueue.child(current).once('value', function (snapBoard) {
+            var board = snapBoard.val().board;
+            console.log('board', board);
+            dispatchPawn('dive', board);
+          });
+        }
+      });
+    };
+
+    var Pawn = new Worker('pawn.js');
+
+    //Pawn Dispatchers
+    var dispatchPawn = function(action, board) {
+      Pawn.postMessage({
+        type: action,
+        board: [board[0], board[1], board[2]]
+      });
+    };
+
+    // var playqueens = function(snapshot) {
+    //   console.log('Getting board from Firebase');
+    //   var boardObj = snapshot.val();
+    //   var job = (boardObj.priority === 6) ? 'breathe' : 'dive';
+    //   dispatchPawn(job, boardObj.board);
+    // };
+
+    //Initial shot to Firebase + general listener;
+    // Checkmate.once('0', playqueens);
+
+
+    //Pawn handlers for shooting to Firebase
+    var count = 1;
+    Pawn.onmessage = function(message) {
+      switch (message.data.type) {
+        case 'solutions':
+          console.log("Recovered %d solutions from Pawn", message.data.package.solutions, message.data.package.board);
+          // TODO: send these somewhere
+          console.log('worker sols: ', message.data.package.solutions);
+          solutionRepo.child(current).push(message.data.package.solutions);
+          solveOneBoard();
+          break;
+        case 'widened':
+          console.log("Pawn Returned some boards: ", message.data.package.source, message.data.package.boards);
+          message.data.package.boards.forEach(function(board) {
+            boardQueue.child(count).set({
+              board: {
+                0: board[0],
+                1: board[1],
+                2: board[2]
+              }
+            }, function(err) {
+              err || console.log("Pushed board to Firebase");
+              // Checkmate.once('child_added', playqueens);
+            });
+
+            count++;
+          });
+          break;
+        default:
+          throw new Error ("Invalid message from Pawn");
+      }
+    };
+
+    Pawn.onerror = function(e) {
+      console.log(e);
+    };
+
+  </script>
+  </body>
+
+</html>

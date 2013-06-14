@@ -1,0 +1,67 @@
+<!DOCTYPE HTML>
+<html lang="en">
+  <head>
+    <title>admin.html</title>
+    <meta charset="utf-8">    
+  </head>
+  <body>
+  <script type='text/javascript' src='https://cdn.firebase.com/v0/firebase.js'></script>
+  <script>
+    var Checkmate = new Firebase('26queens.firebaseIO.com/');
+    var boardQueue = Checkmate.child('boards');
+    var solutionRepo = Checkmate.child('solutions');
+    var blankBoard = Checkmate.child('blankBoard');
+    var clientRepo = Checkmate.child('clients');
+
+    // pull solution data
+
+    // reset globe
+
+    // update globe
+
+    // calculate buckets
+
+    // increment buckets
+
+    var adminQueens = function () {
+      this.countSolutions = function () {
+        var count = 1;
+        var total = 0;
+        while (count <= totalBoards) {
+          solutionRepo.child(count).once('value', function (snapshot){
+            var result = -1;
+            snapshot.forEach(function (childsnapshot) {
+              if (result === -1) {
+                result = childsnapshot.val();
+              }
+            });
+            total += result;
+            console.log('total solutions: ' + total);
+            if (count === totalBoards) {
+              // write total to firebase
+              
+            }
+          });
+          count++;
+        }
+      };
+    };
+
+    var globeQueens = function () {
+      initGlobeData = function () {
+        // get something from firebase
+      };
+      setupBuckets = function () {};
+      pullAndDelete = function () {
+        // pull and delete the client data from some repo in a transaction
+        // do this on some interval
+        // then do calcs and update the batch data
+      };
+    };
+
+    var admin = new adminQueens();
+
+  </script>
+  </body>
+
+</html>

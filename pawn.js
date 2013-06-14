@@ -59,7 +59,7 @@ onmessage = function(message) {
       self.postMessage({
         type: 'solutions',
         package: {
-          solutions: depth(26, message.data.board),
+          solutions: depth(10, message.data.board),
           board: message.data.board
         }
       });
@@ -69,7 +69,7 @@ onmessage = function(message) {
         type: 'widened',
         package: {
           source: message.data.board,
-          boards: deepBreadth(26, message.data.board, 4)
+          boards: deepBreadth(10, message.data.board, 3)
         }
       });
       break;

@@ -50,7 +50,9 @@
   <script src="sidebar.js"></script>
   <script>
   var sideBar = new DAT.SideBar();
-  var myRootRef = new Firebase('testqueens.firebaseIO.com/');
+  var FireGlobe = new Firebase('https://26globe.firebaseIO.com');
+  var fireGlobeLocations = FireGlobe.child('initialRequest');
+  var fireGlobeUpdate = FireGlobe.child('updateRequest');
 
     if (System.support.webgl === false) {
 
@@ -75,10 +77,6 @@
       var numSecondsBetweenRequests = 0.5;
       var data;
       var firstUpdate = true;
-
-      var updateFireBase = function () {
-        myRootRef.child(clientID).update({boards: localBoards, solutions: localsols,  operations: localOps,  jobs: localJobs});
-      };
 
       var xhrRequest = function(path, isInitialRequest) {
         var xhr = new XMLHttpRequest();
@@ -116,17 +114,54 @@
 
       }
 
-      myRootRef.on('value', function(snapshot) {
-        $('#solutions').text(snapshot.val().solutions);
-        $('#contributors').text(snapshot.val().contributors);
-        $('#jobs').text(snapshot.val().jobs);
-        $('#userSolutions').text(snapshot.val().userSolutions);
-        $('#userJobs').text(snapshot.val().userSolutions);
-      });
+      // myRootRef.on('value', function(snapshot) {
+      //   $('#solutions').text(snapshot.val().solutions);
+      //   $('#contributors').text(snapshot.val().contributors);
+      //   $('#jobs').text(snapshot.val().jobs);
+      //   $('#userSolutions').text(snapshot.val().userSolutions);
+      //   $('#userJobs').text(snapshot.val().userSolutions);
+      // });
 
 
-      xhrRequest('initialRequest.json', true);
-      globe.animate();
+
+      // TIM: set up data
+      var fireLoader = function () {
+        fireGlobeLocations.once('value', function (snapshot) {
+          constantData = snapshot.val()
+          globe.initializeData(constantData[1], {
+            format: 'magnitude',
+            name: constantData[0],
+            animated: false,
+            belowGlobe: true
+          });
+          globe.createInitialPoints();
+          globe.animate();
+        });
+      };
+
+      // xhrRequest('initialRequest.json', true);
+      fireLoader();
+
+      var fireUpdater = function () {
+        fireGlobeUpdate.once('value', function (snapshot) {
+          var data = snapshot.val();
+          globe.updateData(constantData[1], {
+            format: 'magnitude',
+            name: constantData[0],
+            animated: true,
+            belowGlobe: true
+          });
+          globe.updateData(data[1], {
+            format: 'magnitude',
+            name: data[0],
+            animated: true,
+            belowGlobe: false
+          });
+
+          globe.createUpdatedPoints();
+        });
+      };
+
 
       var animate = function() {
         requestAnimationFrame(animate);
@@ -154,16 +189,6 @@
 
       }
 
-      // var authClient = new FirebaseAuthClient(myRootRef, function(error, user) {
-      //   if (!error) {
-      //     console.log(authClient);
-      //   }
-      // });
-
-      // var timAuth = function () {
-      //   authClient.login('facebook');
-      // };
-
       var handleRequestTiming = function() {
         if (requestFrameCounter === fps * numSecondsBetweenRequests) {
           if (!firstUpdate) {
@@ -175,7 +200,9 @@
 
           requestFrameCounter = 0;
 
-          xhrRequest('updatedRequest.json', false)
+          // TIM: update the globe
+          // xhrRequest('updatedRequest.json', false)
+          fireUpdater();
 
         }
         requestFrameCounter++;
@@ -186,7 +213,6 @@
      }
 
   </script>
-  <script src="kingmaker.js"></script>
   </body>
 
 </html>

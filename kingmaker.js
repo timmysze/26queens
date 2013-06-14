@@ -1,5 +1,5 @@
 var Pawn = new Worker('pawn.js');
-var Checkmate = new Firebase('https://firequeens.firebaseIO.com/test_board');
+var Checkmate = new Firebase('https://26queens.firebaseio.com/');
 
 //Pawn Dispatchers
 var dispatchPawn = function(action, board) {
@@ -16,15 +16,12 @@ var playqueens = function(snapshot) {
   dispatchPawn(job, boardObj.board);
 };
 
-//Initial shot to Firebase + general listener;
-Checkmate.once('child_added', playqueens);
-
-
 //Pawn handlers for shooting to Firebase
 Pawn.onmessage = function(message) {
   switch (message.data.type) {
     case 'solutions':
       console.log("Recovered %d solutions from Pawn", message.data.package.solutions, message.data.package.board);
+      // TODO: send these somewhere
       break;
     case 'widened':
       console.log("Pawn Returned some boards: ", message.data.package.source, message.data.package.boards);
